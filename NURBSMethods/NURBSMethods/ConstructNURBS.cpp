@@ -149,8 +149,8 @@ void ConstructNURBS::PlotNURB_ps(size_t K,size_t N,double**ctrl_p,size_t*knot,bo
 	scale_y=10.0/(ly);
 
 
-	//shift_x = 1.5*scale_x+xmin;	//with circle
-	shift_x = 1.1*scale_x+xmin;	//with open curve 
+	shift_x = 1.5*scale_x+xmin;	//with circle
+	//shift_x = 1.1*scale_x+xmin;	//with open curve 
 	shift_y = 0.05 * (28.0 - (1.0) * scale_x)+5.0;	
 
     file << shift_x << " " << shift_y << " translate" << std::endl;
