@@ -149,8 +149,9 @@ void ConstructNURBS::PlotNURB_ps(size_t K,size_t N,double**ctrl_p,size_t*knot,bo
 	scale_y=10.0/(ly);
 
 
-	shift_x = 1.5*scale_x+xmin;	//with circle
+	//shift_x = 1.5*scale_x+xmin;	//with circle
 	//shift_x = 1.1*scale_x+xmin;	//with open curve 
+	shift_x=1.0; //with batman
 	shift_y = 0.05 * (28.0 - (1.0) * scale_x)+5.0;	
 
     file << shift_x << " " << shift_y << " translate" << std::endl;
@@ -247,7 +248,13 @@ void ConstructNURBS::PlotNURB_ps(size_t K,size_t N,double**ctrl_p,size_t*knot,bo
 
    file << "1.0 0.0 0.0 setrgbcolor" << endl;
    for(V=1;V<=N;V++){
-	    file<< (ctrl_p[V][0])*scale_x<<" "<< (ctrl_p[V][1])*scale_x<<" "<<0.05*scale_x<<" dot"<<endl;
+	    file<< (ctrl_p[V][0])*scale_x<<" "<< (ctrl_p[V][1])*scale_x<<" "<<0.005*scale_x<<" dot"<<endl;
+		if(V<N){
+
+			//file<<(ctrl_p[V][0])*scale_x<<" "<< (ctrl_p[V][1])*scale_x<<" ";
+			//file<<(ctrl_p[V+1][0])*scale_x<<" "<< (ctrl_p[V+1][1])*scale_x<<" seg"<<endl;
+			
+		}
    }
 
 
@@ -255,7 +262,7 @@ void ConstructNURBS::PlotNURB_ps(size_t K,size_t N,double**ctrl_p,size_t*knot,bo
    for(u=0.00000001;u<max_u;u+=0.001){
 	   PointOnNURBCurve(u,N,K,ctrl_p,knot,xx,yy,kts);
 	   
-	   file<< (xx)*scale_x<<" "<< (yy)*scale_x<<" "<<0.01*scale_x<<" dot"<<endl;
+	   file<< (xx)*scale_x<<" "<< (yy)*scale_x<<" "<<0.001*scale_x<<" dot"<<endl;
    }
 
 }

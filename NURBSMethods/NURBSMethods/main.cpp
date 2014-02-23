@@ -139,7 +139,8 @@ int main()
 
 	cout<<"\n Reading Input File"<<endl;
 	ifstream inputfile;
-	inputfile.open("circle.txt");
+	inputfile.open("batman.txt");
+	//inputfile.open("circle.txt");
 	//inputfile.open("curve.txt");
 	//inputfile.open("surface.txt");
 	inputfile>>K; //oder or order_u 
@@ -240,8 +241,8 @@ int main()
 	}
 
 	//********
-	_u_max=4.0; // use this with circle since it's closed. (still don't know how to calculate u_max for closed nurbs)
-	//_u_max=N-K+1; // use this with open/any nurbs
+	//_u_max=4.0; // use this with circle since it's closed. (still don't know how to calculate u_max for closed nurbs)
+	_u_max=N-K+1; // use this with open/any nurbs
 	//*********
 
 #endif 
