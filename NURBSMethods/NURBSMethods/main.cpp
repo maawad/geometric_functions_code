@@ -398,7 +398,7 @@ int main()
 
 
 	//adding samples where u=int (close to sharp features)
-	for(V=1;V<_u_max;V++){
+	for(V=0;V<_u_max;V++){
 		_samples[_num_samples][2]=V;
 		nurb.PointOnNURBCurve(_samples[_num_samples][2],N,K,ctrl_p,knot,_samples[_num_samples][0],_samples[_num_samples][1],kts,_tol,_u_max);
 		_num_samples++;
