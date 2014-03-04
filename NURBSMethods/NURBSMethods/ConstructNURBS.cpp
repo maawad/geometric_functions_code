@@ -79,7 +79,7 @@ double ConstructNURBS::BasisFunction(size_t i, size_t K, size_t N,double u, size
 		return term5+term6;
 	}
 }
-void ConstructNURBS::PointOnNURBCurve(double u,size_t N,size_t K,double** ctrl_p,size_t*&knot,double&x,double&y,bool kts)
+void ConstructNURBS::PointOnNURBCurve(double u,size_t N,size_t K,double** ctrl_p,size_t*&knot,double&x,double&y,bool kts,double _tol,double _u_max)
 {
 	//http://www.enseignement.polytechnique.fr/informatique/INF555/Slides/lecture4_v2.pdf
 	//Open Rational B-Spline
@@ -87,11 +87,16 @@ void ConstructNURBS::PointOnNURBCurve(double u,size_t N,size_t K,double** ctrl_p
 
 	if(kts){KnotVector(K,N,knot);}
 
+	if(u==0.0){u+=_tol;}
+	if(u==_u_max){u-=_tol;}
+
 	if(K<=1 || K>N){
 		cout<<"Error(0) at PointOnNURBCurve(). Invalid K value"<<endl;
 		system("pause");
 	}
-	if(u<0 || u>N-K+2){
+	
+
+	if(u<0 || u>N-K+1){
 		cout<<"Error(1) at PointOnNURBCurve(). Invalid u value"<<endl;
 		system("pause");
 	}
@@ -121,7 +126,7 @@ void ConstructNURBS::PointOnNURBCurve(double u,size_t N,size_t K,double** ctrl_p
 	x=term1_x/term2_x;
 	y=term1_y/term2_y;
 }
-void ConstructNURBS::PlotNURB_ps(size_t K,size_t N,double**ctrl_p,size_t*knot,bool kts,double max_u)
+void ConstructNURBS::PlotNURB_ps(size_t K,size_t N,double**ctrl_p,size_t*knot,bool kts,double max_u,double _tol)
 {
 	fstream file("NURB.ps", ios::out);
 	file.precision(30);
@@ -146,6 +151,7 @@ void ConstructNURBS::PlotNURB_ps(size_t K,size_t N,double**ctrl_p,size_t*knot,bo
 	
 
 	scale_x=8.0/(lx);
+	
 	scale_y=10.0/(ly);
 
 
@@ -166,7 +172,7 @@ void ConstructNURBS::PlotNURB_ps(size_t K,size_t N,double**ctrl_p,size_t*knot,bo
     file << " moveto" << std::endl;
     file << " lineto" << std::endl;
     file << " closepath" << std::endl;
-    file << " 0.05 setlinewidth" << std::endl;
+    file << " 0.01 setlinewidth" << std::endl;
 	file << " 0 0 0 setrgbcolor" << std::endl;
     file << " stroke" << std::endl;
     file << "} def" << std::endl;
@@ -246,11 +252,12 @@ void ConstructNURBS::PlotNURB_ps(size_t K,size_t N,double**ctrl_p,size_t*knot,bo
  
    double xx,yy,u;
 
-   file << "1.0 0.0 0.0 setrgbcolor" << endl;
+   
    for(V=1;V<=N;V++){
+	   file << "1.0 0.0 0.0 setrgbcolor" << endl;
 	    file<< (ctrl_p[V][0])*scale_x<<" "<< (ctrl_p[V][1])*scale_x<<" "<<0.005*scale_x<<" dot"<<endl;
 		if(V<N){
-
+			
 			//file<<(ctrl_p[V][0])*scale_x<<" "<< (ctrl_p[V][1])*scale_x<<" ";
 			//file<<(ctrl_p[V+1][0])*scale_x<<" "<< (ctrl_p[V+1][1])*scale_x<<" seg"<<endl;
 			
@@ -260,14 +267,14 @@ void ConstructNURBS::PlotNURB_ps(size_t K,size_t N,double**ctrl_p,size_t*knot,bo
 
    file << "0.0 0.0 0.83 setrgbcolor" << endl;
    for(u=0.00000001;u<max_u;u+=0.001){
-	   PointOnNURBCurve(u,N,K,ctrl_p,knot,xx,yy,kts);
+	   PointOnNURBCurve(u,N,K,ctrl_p,knot,xx,yy,kts,_tol,max_u);
 	   
 	   file<< (xx)*scale_x<<" "<< (yy)*scale_x<<" "<<0.001*scale_x<<" dot"<<endl;
    }
 
 }
 
-void ConstructNURBS::PointOnNURBSurface(double u,double w,size_t N,size_t M,size_t K,size_t L,double***ctrl_p,size_t*&knot_u,size_t*&knot_w,double&x,double&y,double&z,bool kts_u,bool kts_w)
+void ConstructNURBS::PointOnNURBSurface(double u,double w,size_t N,size_t M,size_t K,size_t L,double***ctrl_p,size_t*&knot_u,size_t*&knot_w,double&x,double&y,double&z,bool kts_u,bool kts_w,double _tol,double _u_max,double _w_max)
 {
 	//N number of control points in u direction
 	//M number of control points in w direction
@@ -280,13 +287,18 @@ void ConstructNURBS::PointOnNURBSurface(double u,double w,size_t N,size_t M,size
 
 	if(kts_u){KnotVector(K,N,knot_u);}
 	if(kts_w){KnotVector(L,M,knot_w);}
+	
+	if(u==0.0){u+=_tol;}
+	if(w==0.0){w+=_tol;}
+	if(u==_u_max){u-=_tol;}
+	if(w==_w_max){w-=_tol;}
 
-	if(u<0 || u>N-K+2){
+	if(u<0 || u>N-K+1){
 		cout<<"Error(0) at PointOnNURBSurface(). Invalid u value"<<endl;
 		system("pause");
 	}
 
-	if(w<0 || w>M-L+2){
+	if(w<0 || w>M-L+1){
 		cout<<"Error(1) at PointOnNURBSurface(). Invalid u value"<<endl;
 		system("pause");
 	}
@@ -328,26 +340,31 @@ void ConstructNURBS::PointOnNURBSurface(double u,double w,size_t N,size_t M,size
 	y=term1_y/term2_y;
 	z=term1_z/term2_z;
 }
-void ConstructNURBS::PlotNURB_surface(size_t K,size_t N,size_t L,size_t M,double***ctrl_p,size_t*knot_u,size_t*knot_w,bool kts_u,bool kts_w,double max_u,double max_w)
+void ConstructNURBS::PlotNURB_surface(size_t K,size_t N,size_t L,size_t M,double***ctrl_p,size_t*knot_u,size_t*knot_w,bool kts_u,bool kts_w,double max_u,double max_w,double _tol)
 {
 	fstream file("NURB_surfaces.obj", ios::out);
 	file.precision(30);
 
-	double x,y,z,u,w,s(0.01);
+	double x,y,z,u,w,u2,w2,s(0.1);
 	size_t num(0),j;
 
-	for(u=0.00000001;u<max_u-s;u+=s){
-		for(w=0.00000001;w<max_w-s;w+=s){			 
-			PointOnNURBSurface(u,w,N,M,K,L,ctrl_p,knot_u,knot_w,x,y,z,kts_u,kts_w);
+	for(u=abs(_tol);u<max_u;u+=s){		
+		for(w=abs(_tol);w<max_w;w+=s){			
+			if(w+s>max_w){w2=max_w-_tol;}
+			else{w2=w+s;}
+			if(u+s>max_u){u2=max_u-_tol;}
+			else{u2=u+s;}
+			
+			PointOnNURBSurface(u,w,N,M,K,L,ctrl_p,knot_u,knot_w,x,y,z,kts_u,kts_w,_tol,max_u,max_w);
 			file<<"v "<<x<<" "<<y<<" "<<z<<endl;
 
-			PointOnNURBSurface(u+s,w,N,M,K,L,ctrl_p,knot_u,knot_w,x,y,z,kts_u,kts_w);
+			PointOnNURBSurface(u2,w,N,M,K,L,ctrl_p,knot_u,knot_w,x,y,z,kts_u,kts_w,_tol,max_u,max_w);
 			file<<"v "<<x<<" "<<y<<" "<<z<<endl;
 
-			PointOnNURBSurface(u+s,w+s,N,M,K,L,ctrl_p,knot_u,knot_w,x,y,z,kts_u,kts_w);
+			PointOnNURBSurface(u2,w2,N,M,K,L,ctrl_p,knot_u,knot_w,x,y,z,kts_u,kts_w,_tol,max_u,max_w);
 			file<<"v "<<x<<" "<<y<<" "<<z<<endl;
 
-			PointOnNURBSurface(u,w+s,N,M,K,L,ctrl_p,knot_u,knot_w,x,y,z,kts_u,kts_w);
+			PointOnNURBSurface(u,w2,N,M,K,L,ctrl_p,knot_u,knot_w,x,y,z,kts_u,kts_w,_tol,max_u,max_w);
 			file<<"v "<<x<<" "<<y<<" "<<z<<endl;
 
 			num++;
@@ -368,7 +385,7 @@ void ConstructNURBS::PlotNURB_surface(size_t K,size_t N,size_t L,size_t M,double
 
 	for(i=1;i<=N;i++){
 		for(j=1;j<=M;j++){
-			fileA<<ctrl_p[i][j][0]<<" "<<ctrl_p[i][j][1]<<" "<<ctrl_p[i][j][2]<<" "<<5<<endl;
+			fileA<<ctrl_p[i][j][0]<<" "<<ctrl_p[i][j][1]<<" "<<ctrl_p[i][j][2]<<" "<<0.05<<endl;
 		}
 	}
 	fileA.close();

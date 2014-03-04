@@ -1,6 +1,7 @@
 #include "ConstructNURBS.h"
 #include "DrawSpheres.h"
 #include "NURBCurvesMPS.h"
+#include "NURBSurfacesMPS.h"
 #include "ProjectPointToNURBCurve.h"
 
 #include <iostream>
@@ -19,11 +20,22 @@ using namespace std;
 #define TwoPI 6.2831853072
 
 
+double Q[1220]; // rand number generator stuff
+int indx;
+double cc;
+double c; /* current CSWB */
+double zc;	/* current SWB `borrow` */
+double zx;	/* SWB seed1 */
+double zy;	/* SWB seed2 */
+size_t qlen;/* length of Q array */
+
 
 
 //#define Surface // define this if working on curved surfaces
 
 
+
+//NURBS parameter (curves and surfaces)
 double*** ctrl_p_ij; //control points coordinates (x,y,z,wt) followed by their weight
 double** ctrl_p; //control points coordinates (x,y,wt) followed by their weight
 double _u_max,_w_max;
@@ -32,10 +44,11 @@ bool kts,kts_u,kts_w;
 
 
 
-
+//Sampling parameters (curves and surfaces)
 double _r_input,**_samples,_s,*_active,*_tmp_active,_tol;
 size_t _num_samples,_num_active,_num_expected,_num_tmp_active;
-
+size_t _nu,_nw,_n,**_active_uw,**_tmp_active_uw;
+size_t* _post,* _negt;// Kd-tree pointer
 	
 
 
@@ -60,7 +73,7 @@ inline void PlotThatPoint(double xx, double yy,size_t disk)
 	}
 	//file<< "0.01 setlinewidth"<<endl;
 	
-	file<< (xx)*scale<<" "<< (yy)*scale<<" "<<0.02*scale<<" dot"<<endl;
+	file<< (xx)*scale<<" "<< (yy)*scale<<" "<<0.002*scale<<" dot"<<endl;
 	if(disk==1){
 		file<< (xx)*scale<<" "<< (yy)*scale<<" "<<_r_input*scale<<" pink_disk"<<endl;
 	}
@@ -79,7 +92,28 @@ inline double Dist(double x1,double y1, double z1, double x2, double y2, double 
 	return dx+dy+dz;
 
 }
+inline void PlotOneByOne(size_t ip,double xx,double yy,double zz,double rr)
+{
 
+	//the input file
+	fstream file("ip.obj",ios::out);
+	file<<1<<endl;
+	file<<xx<<" "<<yy<<" "<<zz<<" "<<rr<<endl;
+	
+	DrawSpheres dr;
+	
+	string fname1;
+	string fname2;
+	fname1="C:/Users/user/Documents/Visual Studio 2010/Projects/NURBS/NURBS/p(";
+	fname2=").obj"; //change directory as approprite 
+
+	string outfilename;
+	stringstream sstm;
+	sstm<<fname1<<ip<<fname2;
+	outfilename=sstm.str();	
+
+	dr.Draw("ip.obj",outfilename,3);
+}
 
 int main()
 {
@@ -89,7 +123,7 @@ int main()
 	cout << "Enter the Radius" << endl;
 	cin >> _r_input;
 	cout << endl;
-
+	_tol=_r_input*10E-5; 
 
 	//****************Reading Input File Starts Here****************///
 
@@ -139,10 +173,12 @@ int main()
 
 	cout<<"\n Reading Input File"<<endl;
 	ifstream inputfile;
-	inputfile.open("batman.txt");
 	//inputfile.open("circle.txt");
 	//inputfile.open("curve.txt");
+	inputfile.open("batman.txt");
 	//inputfile.open("surface.txt");
+	//inputfile.open("cylinder.txt");
+	//inputfile.open("torus3.txt"); //http://www.ann.jussieu.fr/~frey/papers/meshing/Hughes%20T.J.R.,%20Isogeometric%20analysis,%20CAD,%20finite%20elements,%20NURBS,%20exact%20geometry%20and%20mesh%20refinement.pdf
 	inputfile>>K; //oder or order_u 
 	inputfile>>N; // num of control points / u
 
@@ -206,8 +242,12 @@ int main()
 	}
 	
 
-	_u_max=N-K+1;
-	_w_max=M-L+1;
+	//_u_max=N-K+1;	//use this for open (not closed) surfaces
+	//_w_max=M-L+1;
+	_u_max=4.0;	//use this with torus 
+	_w_max=4.0;
+	
+
 #else
 	ctrl_p=new double*[N+1];
 	for(V=1;V<=N;V++){
@@ -259,10 +299,22 @@ int main()
 	ConstructNURBS nurb;
 	double x,y,z,u,w;	
 	//Draw your nurbs as a start
+	cout<<"\n Plotting"<<endl;
 #ifdef Surface
-	nurb.PlotNURB_surface(K,N,L,M,ctrl_p_ij,knot_u,knot_w,kts_u,kts_w,_u_max,_w_max);	
+	//nurb.PlotNURB_surface(K,N,L,M,ctrl_p_ij,knot_u,knot_w,kts_u,kts_w,_u_max,_w_max,_tol);	
+	if(false){
+		V=0;
+		for(i=1;i<=N;i++){
+			for(j=1;j<=M;j++){
+				V++;
+				PlotOneByOne(V,ctrl_p_ij[i][j][0],ctrl_p_ij[i][j][1],ctrl_p_ij[i][j][2],0.05);
+
+			}
+		}
+	}
+
 #else
-	nurb.PlotNURB_ps(K,N,ctrl_p,knot,kts,_u_max);
+	nurb.PlotNURB_ps(K,N,ctrl_p,knot,kts,_u_max,_tol);
 #endif
 
 		
@@ -270,7 +322,43 @@ int main()
 
 
 	//****************Initilize Sampling Data Structure Starts Here****************///
-	cout<<"\n Initialize"<<endl;	
+	cout<<"\n Initialize Sampling"<<endl;
+#ifdef Surface	
+ 	_num_samples=0; //total number of samples
+	_num_expected=10E5;	
+	if(_u_max>_w_max){_s=(_u_max)/50.0;}
+	else{_s=(_w_max)/50.0;}
+	_nu=size_t (ceil(_u_max/_s));
+	_nw=size_t (ceil(_w_max/_s));
+	_n=_nu*_nw;
+	_num_active=0;
+	_active_uw=new size_t*[_num_expected];
+	_post=new size_t[_num_expected];
+	_negt=new size_t[_num_expected];
+	_tmp_active_uw=new size_t*[_num_expected];
+
+	_samples=new double*[_num_expected];//samples coordinates+parameter
+
+	for(V=0;V<_num_expected;V++){
+		_post[V]=0;
+		_negt[V]=0;
+		_active_uw[V]=new size_t[2];
+		_tmp_active_uw[V]=new size_t[2];
+		_samples[V]=new double[5]; //(x,y,z,u,w)
+	}
+
+	for(V=0;V<_n;V++){
+		i=size_t (V/_nu);
+		j=size_t (V-(i*_nw));
+		if(i*_s<=_u_max && j*_s<=_w_max){			
+			_active_uw[_num_active][0]=i;
+			_active_uw[_num_active][1]=j;
+			_num_active++;
+		}		
+		
+	}
+
+#else 
 	_tol=10E-10; //tolerance
 	_num_samples=0; //total number of samples
 	_num_active=50; //number of active segements (similar to active cells)
@@ -305,6 +393,7 @@ int main()
 		_samples[_num_samples][2]=_u_max;
 		_num_samples++;
 	}
+#endif
 	//****************Initilize Sampling Data Structure Ends Here****************///
 
 
@@ -318,6 +407,24 @@ int main()
 
 	//****************Sampling Starts Here****************///
 	cout<<"\n MPS Sampling"<<endl;
+#ifdef Surface
+	NURBSurfacesMPS nurbs_mps;
+	nurbs_mps.NURBSDartThrowing(_num_active,_active_uw,_tmp_active_uw,_s,_nu,_nw,_n, //active cells stuff
+	                            _num_samples,_samples,_r_input,_tol,_num_expected,// samples stuff
+								_post,_negt,// kd-tree stuff
+								ctrl_p_ij,_u_max,_w_max,knot_u,knot_w,K,N,L,M,kts_u,kts_w);// nurb surface stuff
+	cout<<"num_points= "<<_num_samples<<endl;
+	//plot
+	DrawSpheres dr;
+	fstream fileA ("Samples.obj",ios::out);
+	fileA.precision(30);
+	fileA<<_num_samples<<endl;
+	for(V=0;V<_num_samples;V++){
+		fileA<<_samples[V][0]<<" "<<_samples[V][1]<<" "<<_samples[V][2]<<" "<<_r_input<<endl;
+	}
+	fileA.close();
+	dr.Draw("Samples.obj","Samples.obj",3);
+#else
 	NURBCurvesMPS nurbs_mps;
 	nurbs_mps.NURBSDartThrowing(_num_active,_active,_s,_tmp_active,  //active cell/segemnts stuff
 	                            _num_samples,_samples,_r_input,_tol, // samples stuff
@@ -327,6 +434,9 @@ int main()
 	for(V=0;V<_num_samples;V++){
 		PlotThatPoint(_samples[V][0],_samples[V][1],1);
 	}
+#endif
+
+
 	//****************Sampling Ends Here****************///
 	
 
@@ -338,9 +448,11 @@ int main()
 
 
 	//****************Testing Getting The Min Distance Starts Here****************///
+#ifndef Surface
 	ProjectPointToNURBCurve min_dist;
 	double dd;
-	dd=min_dist.MinDist(2.0,0.0,u,ctrl_p,_u_max,knot,K,N,kts);
+	dd=min_dist.MinDist(2.0,0.0,u,ctrl_p,_u_max,knot,K,N,kts,_tol);
+#endif
 	//****************Testing Getting The Min Distance Ends Here****************///
 
 

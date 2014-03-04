@@ -10,7 +10,7 @@
 #include <cassert>
 using namespace std;
 
-double ProjectPointToNURBCurve::MinDist(double xc, double yc,double&uu,double** ctrl_p,double _u_max,size_t *knot,size_t K,size_t N,bool kts)
+double ProjectPointToNURBCurve::MinDist(double xc, double yc,double&uu,double** ctrl_p,double _u_max,size_t *knot,size_t K,size_t N,bool kts,double _tol)
 {
 	// TODO apply this algorithem http://www-sop.inria.fr/members/Gang.Xu/English/paper/CAD08_miniDistance.pdf
 
@@ -28,7 +28,7 @@ double ProjectPointToNURBCurve::MinDist(double xc, double yc,double&uu,double** 
 				
 		u=double(V)*s;
 
-		nurb.PointOnNURBCurve(u,N,K,ctrl_p,knot,xx,yy,kts);
+		nurb.PointOnNURBCurve(u,N,K,ctrl_p,knot,xx,yy,kts,_tol,_u_max);
 
 		dist=Dist(xc,yc,0,xx,yy,0);
 
@@ -40,7 +40,7 @@ double ProjectPointToNURBCurve::MinDist(double xc, double yc,double&uu,double** 
 
 	if(false){
 		//plots the closest points and stright line between it and the test point (xc,yc)
-		nurb.PointOnNURBCurve(uu,N,K,ctrl_p,knot,xx,yy,kts);
+		nurb.PointOnNURBCurve(uu,N,K,ctrl_p,knot,xx,yy,kts,_tol,_u_max);
 
 		PlotThatPoint(xc,yc,xx,yy,ctrl_p,N);
 	}

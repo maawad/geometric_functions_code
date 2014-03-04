@@ -10,15 +10,15 @@
 #include <cassert>
 using namespace std;
 
+extern	double Q[1220]; // rand number generator stuff
+extern	int indx;
+extern	double cc;
+extern	double c; /* current CSWB */
+extern	double zc;	/* current SWB `borrow` */
+extern	double zx;	/* SWB seed1 */
+extern	double zy;	/* SWB seed2 */
+extern	size_t qlen;/* length of Q array */
 
-double Q[1220]; // rand number generator stuff
-int indx;
-double cc;
-double c; /* current CSWB */
-double zc;	/* current SWB `borrow` */
-double zx;	/* SWB seed1 */
-double zy;	/* SWB seed2 */
-size_t qlen;/* length of Q array */
 
 
 void NURBCurvesMPS::InitiateRandNumGenerator (unsigned long x)
@@ -117,7 +117,7 @@ void NURBCurvesMPS::NURBSDartThrowing(size_t _num_active,double*_active,double _
 
 
 	for (int iref=0;iref<30;iref++){ 
-
+		cout<<"num_samples= "<<_num_samples<<endl;
 		num_darts=RF*_num_active;		
 
 		//dart throwing
@@ -127,9 +127,9 @@ void NURBCurvesMPS::NURBSDartThrowing(size_t _num_active,double*_active,double _
 
 			uu=_active[rand_index]+rand_u; 
 			
-			nurb.PointOnNURBCurve(uu,N,K,ctrl_p,knot,xx,yy,kts);						
+			nurb.PointOnNURBCurve(uu,N,K,ctrl_p,knot,xx,yy,kts,_tol,_u_max);						
 						 
-			if( !Conflicting(xx,yy,uu,_num_samples,_samples,_r_input,ctrl_p,_u_max,knot,K,N,kts,_tol) ){
+			if(!Conflicting(xx,yy,uu,_num_samples,_samples,_r_input,ctrl_p,_u_max,knot,K,N,kts,_tol) ){
 				//add sample if not conflicting
 				_samples[_num_samples][0]=xx;
 				_samples[_num_samples][1]=yy;
@@ -141,7 +141,7 @@ void NURBCurvesMPS::NURBSDartThrowing(size_t _num_active,double*_active,double _
 		num_tmp_active=0;
 		
 		if(false){
-			nurb.PlotNURB_ps(K,N,ctrl_p,knot,kts,_u_max);
+			nurb.PlotNURB_ps(K,N,ctrl_p,knot,kts,_u_max,_tol);
 			for(V=0;V<_num_samples;V++){
 				PlotThatPoint(_samples[V][0],_samples[V][1],1,ctrl_p,N,_r_input);
 			}
@@ -153,8 +153,8 @@ void NURBCurvesMPS::NURBSDartThrowing(size_t _num_active,double*_active,double _
 			u_end=u_st+_s;
 			if(u_end>=_u_max){u_end=_u_max-_tol;}
 
-			nurb.PointOnNURBCurve(u_st ,N,K,ctrl_p,knot,x_st ,y_st ,kts);						
-			nurb.PointOnNURBCurve(u_end,N,K,ctrl_p,knot,x_end,y_end,kts);
+			nurb.PointOnNURBCurve(u_st ,N,K,ctrl_p,knot,x_st ,y_st ,kts,_tol,_u_max);						
+			nurb.PointOnNURBCurve(u_end,N,K,ctrl_p,knot,x_end,y_end,kts,_tol,_u_max);
 
 			if(false){
 				PlotThatPoint(x_st ,y_st,0,ctrl_p,N,_r_input );
@@ -209,11 +209,11 @@ double NURBCurvesMPS::DistOnNurb(double u1, double u2,double** ctrl_p,double _u_
 	
 	ConstructNURBS nurb;
 
-	nurb.PointOnNURBCurve(umin,N,K,ctrl_p,knot,x_prv,y_prv,kts);	
+	nurb.PointOnNURBCurve(umin,N,K,ctrl_p,knot,x_prv,y_prv,kts,_tol,_u_max);	
 	for(V=1;V<=n;V++){
 		u=umin+V*u_s;
 		if(u>=_u_max){u=_u_max-_tol;}
-		nurb.PointOnNURBCurve(u,N,K,ctrl_p,knot,xx,yy,kts);
+		nurb.PointOnNURBCurve(u,N,K,ctrl_p,knot,xx,yy,kts,_tol,_u_max);
 		dist+=Dist(xx,yy,0,x_prv,y_prv,0);
 		x_prv=xx;
 		y_prv=yy;
@@ -225,20 +225,20 @@ double NURBCurvesMPS::DistOnNurb(double u1, double u2,double** ctrl_p,double _u_
 		bool part1=false;//
 		double dist1(0),x_nxt,y_nxt,uu,u_nxt;
 
-		nurb.PointOnNURBCurve(umax,N,K,ctrl_p,knot,xx,yy,kts);
+		nurb.PointOnNURBCurve(umax,N,K,ctrl_p,knot,xx,yy,kts,_tol,_u_max);
 		uu=umax;
 		while(true){
 			u_nxt=uu+u_s;
 
 			if(u_nxt>=_u_max){
 				uu=0;
-				nurb.PointOnNURBCurve(uu,N,K,ctrl_p,knot,xx,yy,kts);
+				nurb.PointOnNURBCurve(uu,N,K,ctrl_p,knot,xx,yy,kts,_tol,_u_max);
 				part1=true;
 				continue;
 			}
 			if(u_nxt>umin && part1){break;}
 				
-			nurb.PointOnNURBCurve(u_nxt,N,K,ctrl_p,knot,x_nxt,y_nxt,kts);
+			nurb.PointOnNURBCurve(u_nxt,N,K,ctrl_p,knot,x_nxt,y_nxt,kts,_tol,_u_max);
 			dist1+=Dist(xx,yy,0,x_nxt,y_nxt,0);
 
 			xx=x_nxt;

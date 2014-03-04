@@ -14,4 +14,6 @@ private:
 	double Dist(double,double,double,double,double,double);
 	void PlotThatPoint(double,double,size_t,double**,size_t,double);
 	bool Conflicting(double,double,double,size_t,double**,double,double**,double,size_t*,size_t,size_t,bool,double);
+
+
 };
