@@ -375,7 +375,9 @@ int main()
 	for(V=0;V<_num_expected;V++){
 		_samples[V]=new double[3]; //(x,y,u)
 	}
-	//add the 1st control point directly (since the samples should represent the curve)
+
+
+	/*//add the 1st control point directly (since the samples should represent the curve)
 	_samples[_num_samples][0]=ctrl_p[1][0];
 	_samples[_num_samples][1]=ctrl_p[1][1];
 	_samples[_num_samples][2]=0;
@@ -392,7 +394,16 @@ int main()
 		_samples[_num_samples][1]=ctrl_p[N][1];
 		_samples[_num_samples][2]=_u_max;
 		_num_samples++;
+	}*/
+
+
+	//adding samples where u=int (close to sharp features)
+	for(V=1;V<_u_max;V++){
+		_samples[_num_samples][2]=V;
+		nurb.PointOnNURBCurve(_samples[_num_samples][2],N,K,ctrl_p,knot,_samples[_num_samples][0],_samples[_num_samples][1],kts,_tol,_u_max);
+		_num_samples++;
 	}
+
 #endif
 	//****************Initilize Sampling Data Structure Ends Here****************///
 
@@ -426,9 +437,9 @@ int main()
 	dr.Draw("Samples.obj","Samples.obj",3);
 #else
 	NURBCurvesMPS nurbs_mps;
-	nurbs_mps.NURBSDartThrowing(_num_active,_active,_s,_tmp_active,  //active cell/segemnts stuff
-	                            _num_samples,_samples,_r_input,_tol, // samples stuff
-	                            ctrl_p,_u_max,knot,K,N,kts);// nurb curve stuff
+	//nurbs_mps.NURBSDartThrowing(_num_active,_active,_s,_tmp_active,  //active cell/segemnts stuff
+	//                           _num_samples,_samples,_r_input,_tol, // samples stuff
+	//                           ctrl_p,_u_max,knot,K,N,kts);// nurb curve stuff
 	cout<<"num_points= "<<_num_samples<<endl;
 	//Plot the output samples
 	for(V=0;V<_num_samples;V++){
