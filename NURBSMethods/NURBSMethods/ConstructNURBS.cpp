@@ -96,7 +96,7 @@ void ConstructNURBS::PointOnNURBCurve(double u,size_t N,size_t K,double** ctrl_p
 	}
 	
 
-	if(u<0 || u>N-K+1){
+	if(u<0 || u>_u_max){
 		cout<<"Error(1) at PointOnNURBCurve(). Invalid u value"<<endl;
 		system("pause");
 	}
@@ -293,12 +293,12 @@ void ConstructNURBS::PointOnNURBSurface(double u,double w,size_t N,size_t M,size
 	if(u==_u_max){u-=_tol;}
 	if(w==_w_max){w-=_tol;}
 
-	if(u<0 || u>N-K+1){
+	if(u<0 || u>_u_max){
 		cout<<"Error(0) at PointOnNURBSurface(). Invalid u value"<<endl;
 		system("pause");
 	}
 
-	if(w<0 || w>M-L+1){
+	if(w<0 || w>_w_max){
 		cout<<"Error(1) at PointOnNURBSurface(). Invalid u value"<<endl;
 		system("pause");
 	}
