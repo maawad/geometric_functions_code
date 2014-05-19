@@ -1,4 +1,5 @@
 #include "ConstructNURBS.h"
+#include "ConstructSpline.h"
 #include "DrawSpheres.h"
 #include "NURBCurvesMPS.h"
 #include "NURBSurfacesMPS.h"
@@ -50,6 +51,7 @@ size_t _num_samples,_num_active,_num_expected,_num_tmp_active;
 size_t _nu,_nw,_n,**_active_uw,**_tmp_active_uw;
 size_t* _post,* _negt;// Kd-tree pointer
 	
+size_t _method;
 
 
 inline void PlotThatPoint(double xx, double yy,size_t disk)
@@ -66,16 +68,30 @@ inline void PlotThatPoint(double xx, double yy,size_t disk)
 	double lx(xmax-xmin),ly(ymax-ymin);
 	scale=8.0/(lx);
 
-	fstream file("NURB.ps",ios::app);	
-	file << "1.0 1.0 0.0 setrgbcolor" << endl;
-	if(disk==0){
-		file << "0.0 0.0 0.0 setrgbcolor" << endl;
-	}
-	//file<< "0.01 setlinewidth"<<endl;
-	
-	file<< (xx)*scale<<" "<< (yy)*scale<<" "<<0.002*scale<<" dot"<<endl;
-	if(disk==1){
-		file<< (xx)*scale<<" "<< (yy)*scale<<" "<<_r_input*scale<<" pink_disk"<<endl;
+	if(_method==1){
+		fstream file("NURB.ps",ios::app);	
+		file << "1.0 1.0 0.0 setrgbcolor" << endl;
+		if(disk==0){		
+			file << "0.0 0.0 0.0 setrgbcolor" << endl;
+		}
+		//file<< "0.01 setlinewidth"<<endl;
+		file<< (xx)*scale<<" "<< (yy)*scale<<" "<<0.002*scale<<" dot"<<endl;
+		if(disk==1){
+			file<< (xx)*scale<<" "<< (yy)*scale<<" "<<_r_input*scale<<" pink_disk"<<endl;
+		}
+	}else{
+
+		fstream file("Spline.ps",ios::app);	
+		file << "1.0 1.0 0.0 setrgbcolor" << endl;
+		if(disk==0){		
+			file << "0.0 0.0 0.0 setrgbcolor" << endl;
+		}
+		//file<< "0.01 setlinewidth"<<endl;
+		file<< (xx)*scale<<" "<< (yy)*scale<<" "<<0.002*scale<<" dot"<<endl;
+		if(disk==1){
+			file<< (xx)*scale<<" "<< (yy)*scale<<" "<<_r_input*scale<<" pink_disk"<<endl;
+		}
+
 	}
 	
 }
@@ -119,6 +135,15 @@ int main()
 {
 	
 	size_t V,d,i,j,tuna;
+
+	cout<<"Enter 1 for NURB, 2 for Bspline"<<endl;
+	cin>>_method;
+	if(_method !=1 && _method!=2){
+		cout<<"Enter a valid number"<<endl;
+		cout<<"Exit"<<endl;	
+		system("pause");		
+		exit(0);
+	}
 		
 	cout << "Enter the Radius" << endl;
 	cin >> _r_input;
@@ -131,7 +156,7 @@ int main()
 	//------------
 	// order
 	//# of control points (N)
-	// x0 y0 wt0
+	// x0 y0 wt0 (wt=weight... wt=1 for all points when using bspline)
 	// x1 y1 wt1
 	// ...	
 	//xN-1 yN-1 wtN-1 
@@ -175,7 +200,9 @@ int main()
 	ifstream inputfile;
 	//inputfile.open("circle.txt");
 	//inputfile.open("curve.txt");
-	inputfile.open("batman.txt");
+	//inputfile.open("batmanspline.txt");
+	inputfile.open("cat.txt");
+	//inputfile.open("batmannurb.txt");
 	//inputfile.open("surface.txt");
 	//inputfile.open("cylinder.txt");
 	//inputfile.open("torus3.txt"); //http://www.ann.jussieu.fr/~frey/papers/meshing/Hughes%20T.J.R.,%20Isogeometric%20analysis,%20CAD,%20finite%20elements,%20NURBS,%20exact%20geometry%20and%20mesh%20refinement.pdf
@@ -253,8 +280,16 @@ int main()
 	for(V=1;V<=N;V++){
 		ctrl_p[V]=new double[3];
 		inputfile>>ctrl_p[V][0]; //x
-		inputfile>>ctrl_p[V][1]; //y
+		inputfile>>ctrl_p[V][1]; //y		
 		inputfile>>ctrl_p[V][2]; // weight
+
+		if(_method==2 && ctrl_p[V][2]!=1){
+			cout<<"Input control point ["<<V<<"] has wieght != 1. INVALID!!"<<endl;
+			cout<<"Using Spline all points must have weight=1 "<<endl;
+			cout<<"Exit"<<endl;	
+			system("pause");
+			exit(0);
+		}
 	}
 
 	size_t num_kts,in;	
@@ -282,7 +317,9 @@ int main()
 
 	//********
 	//_u_max=4.0; // use this with circle since it's closed. (still don't know how to calculate u_max for closed nurbs)
-	_u_max=N-K+1; // use this with open/any nurbs
+	//_u_max=N-K+1; // use this with open/any nurbs
+	//_u_max=26;// with batman
+	_u_max=136;// with cat
 	//*********
 
 #endif 
@@ -297,6 +334,7 @@ int main()
 
 
 	ConstructNURBS nurb;
+	ConstructSpline spline;
 	double x,y,z,u,w;	
 	//Draw your nurbs as a start
 	cout<<"\n Plotting"<<endl;
@@ -314,7 +352,11 @@ int main()
 	}
 
 #else
-	nurb.PlotNURB_ps(K,N,ctrl_p,knot,kts,_u_max,_tol);
+	if(_method==1){
+		nurb.PlotNURB_ps(K,N,ctrl_p,knot,kts,_u_max,_tol);
+	}else{	
+		spline.PlotSpline_ps(K,N,ctrl_p,knot,kts,_u_max,_tol);
+	}
 #endif
 
 		
@@ -359,7 +401,7 @@ int main()
 	}
 
 #else 
-	_tol=10E-10; //tolerance
+	_tol=10E-8; //tolerance
 	_num_samples=0; //total number of samples
 	_num_active=50; //number of active segements (similar to active cells)
 	_s=_u_max/_num_active; //spacing 
@@ -377,7 +419,7 @@ int main()
 	}
 
 
-	/*//add the 1st control point directly (since the samples should represent the curve)
+	//add the 1st control point directly (since the samples should represent the curve)
 	_samples[_num_samples][0]=ctrl_p[1][0];
 	_samples[_num_samples][1]=ctrl_p[1][1];
 	_samples[_num_samples][2]=0;
@@ -394,13 +436,17 @@ int main()
 		_samples[_num_samples][1]=ctrl_p[N][1];
 		_samples[_num_samples][2]=_u_max;
 		_num_samples++;
-	}*/
+	}
 
 
 	//adding samples where u=int (close to sharp features)
 	for(V=0;V<_u_max;V++){
 		_samples[_num_samples][2]=V;
-		nurb.PointOnNURBCurve(_samples[_num_samples][2],N,K,ctrl_p,knot,_samples[_num_samples][0],_samples[_num_samples][1],kts,_tol,_u_max);
+		if(_method==1){
+			nurb.PointOnNURBCurve(_samples[_num_samples][2],N,K,ctrl_p,knot,_samples[_num_samples][0],_samples[_num_samples][1],kts,_tol,_u_max);
+		}else{
+			spline.PointOnSplineCurve(_samples[_num_samples][2],N,K,ctrl_p,knot,_samples[_num_samples][0],_samples[_num_samples][1],kts,_tol,_u_max);
+		}
 		_num_samples++;
 	}
 
@@ -437,9 +483,9 @@ int main()
 	dr.Draw("Samples.obj","Samples.obj",3);
 #else
 	NURBCurvesMPS nurbs_mps;
-	//nurbs_mps.NURBSDartThrowing(_num_active,_active,_s,_tmp_active,  //active cell/segemnts stuff
-	//                           _num_samples,_samples,_r_input,_tol, // samples stuff
-	//                           ctrl_p,_u_max,knot,K,N,kts);// nurb curve stuff
+	nurbs_mps.NURBSDartThrowing(_num_active,_active,_s,_tmp_active,  //active cell/segemnts stuff
+	                           _num_samples,_samples,_r_input,_tol, // samples stuff
+	                           ctrl_p,_u_max,knot,K,N,kts,_method);// nurb curve stuff
 	cout<<"num_points= "<<_num_samples<<endl;
 	//Plot the output samples
 	for(V=0;V<_num_samples;V++){
@@ -462,7 +508,7 @@ int main()
 #ifndef Surface
 	ProjectPointToNURBCurve min_dist;
 	double dd;
-	dd=min_dist.MinDist(2.0,0.0,u,ctrl_p,_u_max,knot,K,N,kts,_tol);
+	dd=min_dist.MinDist(2.0,0.0,u,ctrl_p,_u_max,knot,K,N,kts,_tol,_method);
 #endif
 	//****************Testing Getting The Min Distance Ends Here****************///
 

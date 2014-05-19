@@ -1,5 +1,6 @@
 #include "ProjectPointToNURBCurve.h"
 #include "ConstructNURBS.h"
+#include "ConstructSpline.h"
 #include <iostream>
 #define _USE_MATH_DEFINES
 #include <math.h>
@@ -10,7 +11,7 @@
 #include <cassert>
 using namespace std;
 
-double ProjectPointToNURBCurve::MinDist(double xc, double yc,double&uu,double** ctrl_p,double _u_max,size_t *knot,size_t K,size_t N,bool kts,double _tol)
+double ProjectPointToNURBCurve::MinDist(double xc, double yc,double&uu,double** ctrl_p,double _u_max,size_t *knot,size_t K,size_t N,bool kts,double _tol,size_t _method)
 {
 	// TODO apply this algorithem http://www-sop.inria.fr/members/Gang.Xu/English/paper/CAD08_miniDistance.pdf
 
@@ -23,12 +24,17 @@ double ProjectPointToNURBCurve::MinDist(double xc, double yc,double&uu,double** 
 	size_t V,d,num(50.0);
 	double s(_u_max/double(num)),u,dist_close(10E10),xx,yy,dist;
 	ConstructNURBS nurb;
+	ConstructSpline spline;
 	
 	for(V=0;V<num;V++){
 				
 		u=double(V)*s;
 
-		nurb.PointOnNURBCurve(u,N,K,ctrl_p,knot,xx,yy,kts,_tol,_u_max);
+		if(_method==1){
+			nurb.PointOnNURBCurve(u,N,K,ctrl_p,knot,xx,yy,kts,_tol,_u_max);
+		}else{
+			spline.PointOnSplineCurve(u,N,K,ctrl_p,knot,xx,yy,kts,_tol,_u_max);
+		}
 
 		dist=Dist(xc,yc,0,xx,yy,0);
 
@@ -40,7 +46,12 @@ double ProjectPointToNURBCurve::MinDist(double xc, double yc,double&uu,double** 
 
 	if(false){
 		//plots the closest points and stright line between it and the test point (xc,yc)
-		nurb.PointOnNURBCurve(uu,N,K,ctrl_p,knot,xx,yy,kts,_tol,_u_max);
+		
+		if(_method==1){
+			nurb.PointOnNURBCurve(uu,N,K,ctrl_p,knot,xx,yy,kts,_tol,_u_max);
+		}else{
+			spline.PointOnSplineCurve(uu,N,K,ctrl_p,knot,xx,yy,kts,_tol,_u_max);
+		}
 
 		PlotThatPoint(xc,yc,xx,yy,ctrl_p,N);
 	}

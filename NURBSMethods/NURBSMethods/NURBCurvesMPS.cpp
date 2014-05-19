@@ -1,5 +1,6 @@
 #include "NURBCurvesMPS.h"
 #include "ConstructNURBS.h"
+#include "ConstructSpline.h"
 #include <iostream>
 #define _USE_MATH_DEFINES
 #include <math.h>
@@ -106,12 +107,14 @@ double NURBCurvesMPS::RandNumGenerator()
 
 void NURBCurvesMPS::NURBSDartThrowing(size_t _num_active,double*_active,double _s,double*_tmp_active,  //active cell/segemnts stuff
 	                                  size_t&_num_samples,double**&_samples,double _r_input,double _tol, // samples stuff
-	                                  double** ctrl_p,double _u_max,size_t *knot,size_t K,size_t N,bool kts)// nurb curve stuff
+	                                  double** ctrl_p,double _u_max,size_t *knot,size_t K,size_t N,bool kts,// nurb curve stuff
+									  size_t _method)
 {
 	//srand ( time(NULL) ); // activate for different experiments
 	InitiateRandNumGenerator(rand());
 
 	ConstructNURBS nurb;
+	ConstructSpline spline;
 	size_t num_darts,idart,rand_index,iactive,V,num_tmp_active;
 	double RF(0.8),rand_u,uu,xx,yy,u_end,u_st,x_st,y_st,x_end,y_end;
 
@@ -127,9 +130,13 @@ void NURBCurvesMPS::NURBSDartThrowing(size_t _num_active,double*_active,double _
 
 			uu=_active[rand_index]+rand_u; 
 			
-			nurb.PointOnNURBCurve(uu,N,K,ctrl_p,knot,xx,yy,kts,_tol,_u_max);						
+			if(_method==1){
+				nurb.PointOnNURBCurve(uu,N,K,ctrl_p,knot,xx,yy,kts,_tol,_u_max);						
+			}else{
+				spline.PointOnSplineCurve(uu,N,K,ctrl_p,knot,xx,yy,kts,_tol,_u_max);						
+			}
 						 
-			if(!Conflicting(xx,yy,uu,_num_samples,_samples,_r_input,ctrl_p,_u_max,knot,K,N,kts,_tol) ){
+			if(!Conflicting(xx,yy,uu,_num_samples,_samples,_r_input,ctrl_p,_u_max,knot,K,N,kts,_tol,_method) ){
 				//add sample if not conflicting
 				_samples[_num_samples][0]=xx;
 				_samples[_num_samples][1]=yy;
@@ -141,7 +148,11 @@ void NURBCurvesMPS::NURBSDartThrowing(size_t _num_active,double*_active,double _
 		num_tmp_active=0;
 		
 		if(false){
-			nurb.PlotNURB_ps(K,N,ctrl_p,knot,kts,_u_max,_tol);
+			if(_method==1){
+				nurb.PlotNURB_ps(K,N,ctrl_p,knot,kts,_u_max,_tol);
+			}else{
+				spline.PlotSpline_ps(K,N,ctrl_p,knot,kts,_u_max,_tol);
+			}
 			for(V=0;V<_num_samples;V++){
 				PlotThatPoint(_samples[V][0],_samples[V][1],1,ctrl_p,N,_r_input);
 			}
@@ -153,15 +164,20 @@ void NURBCurvesMPS::NURBSDartThrowing(size_t _num_active,double*_active,double _
 			u_end=u_st+_s;
 			if(u_end>=_u_max){u_end=_u_max-_tol;}
 
-			nurb.PointOnNURBCurve(u_st ,N,K,ctrl_p,knot,x_st ,y_st ,kts,_tol,_u_max);						
-			nurb.PointOnNURBCurve(u_end,N,K,ctrl_p,knot,x_end,y_end,kts,_tol,_u_max);
+			if(_method==1){
+				nurb.PointOnNURBCurve(u_st ,N,K,ctrl_p,knot,x_st ,y_st ,kts,_tol,_u_max);						
+				nurb.PointOnNURBCurve(u_end,N,K,ctrl_p,knot,x_end,y_end,kts,_tol,_u_max);
+			}else{
+				spline.PointOnSplineCurve(u_st ,N,K,ctrl_p,knot,x_st ,y_st ,kts,_tol,_u_max);						
+				spline.PointOnSplineCurve(u_end,N,K,ctrl_p,knot,x_end,y_end,kts,_tol,_u_max);
+			}
 
 			if(false){
 				PlotThatPoint(x_st ,y_st,0,ctrl_p,N,_r_input );
 				PlotThatPoint(x_end,y_end,0,ctrl_p,N,_r_input);
 			}
 
-			if(Covered(x_st,y_st,u_st,x_end,y_end,u_end,_samples,_num_samples,_r_input,ctrl_p,_u_max,knot,K,N,kts,_tol)){continue;}
+			if(Covered(x_st,y_st,u_st,x_end,y_end,u_end,_samples,_num_samples,_r_input,ctrl_p,_u_max,knot,K,N,kts,_tol,_method)){continue;}
 
 			_tmp_active[num_tmp_active]=u_st;
 			num_tmp_active++;
@@ -179,14 +195,19 @@ void NURBCurvesMPS::NURBSDartThrowing(size_t _num_active,double*_active,double _
 	}
 }
 bool NURBCurvesMPS::Covered(double xx1, double yy1,double uu1,double xx2, double yy2,double uu2,double**_samples,size_t _num_samples,double _r_input,
-	                       double** ctrl_p,double _u_max,size_t *knot,size_t K,size_t N,bool kts,double _tol)
+	                       double** ctrl_p,double _u_max,size_t *knot,size_t K,size_t N,bool kts,double _tol,size_t _method)
 {	
 	//TODO use kd-tree
 	size_t V;
 	double dist1,dist2;
 	for(V=0;V<_num_samples;V++){
-		dist1=DistOnNurb(_samples[V][2],uu1,ctrl_p,_u_max,knot,K,N,kts,_tol);
-		dist2=DistOnNurb(_samples[V][2],uu2,ctrl_p,_u_max,knot,K,N,kts,_tol);
+		if(_method==1){
+			dist1=DistOnNurb(_samples[V][2],uu1,ctrl_p,_u_max,knot,K,N,kts,_tol);
+			dist2=DistOnNurb(_samples[V][2],uu2,ctrl_p,_u_max,knot,K,N,kts,_tol);
+		}else{
+			dist1=DistOnSpline(_samples[V][2],uu1,ctrl_p,_u_max,knot,K,N,kts,_tol);
+			dist2=DistOnSpline(_samples[V][2],uu2,ctrl_p,_u_max,knot,K,N,kts,_tol);
+		}
 		if(dist1<_r_input && dist2<_r_input){return true;}
 	}
 	return false;
@@ -196,13 +217,13 @@ double NURBCurvesMPS::DistOnNurb(double u1, double u2,double** ctrl_p,double _u_
 	//divide the distance into n interval, and measure euclidean distance between 
 	//each two consecutive points
 	double umin,umax,u_s,x_prv,y_prv,xx,yy,u,dist(0);
-	size_t n(100),V;
+	size_t n(50),V;
 	if(u1<u2){umax=u2;umin=u1;}
 	else{umax=u1;umin=u2;}
 	u_s=double(umax-umin)/double(n);
 	bool open;
 
-	if(u2==u1){return 0.0;}
+	if(abs(u2-u1)<=_tol){return 0.0;}
 
 	if(Dist(ctrl_p[1][0],ctrl_p[1][1],0,ctrl_p[N][0],ctrl_p[N][1],0)<_tol*_tol){open=false;}
 	else{open=true;}
@@ -239,6 +260,70 @@ double NURBCurvesMPS::DistOnNurb(double u1, double u2,double** ctrl_p,double _u_
 			if(u_nxt>umin && part1){break;}
 				
 			nurb.PointOnNURBCurve(u_nxt,N,K,ctrl_p,knot,x_nxt,y_nxt,kts,_tol,_u_max);
+			dist1+=Dist(xx,yy,0,x_nxt,y_nxt,0);
+
+			xx=x_nxt;
+			yy=y_nxt;
+			uu=u_nxt;
+		}
+
+
+		if(dist1<dist){return dist1;}
+	}
+
+	
+	return dist;
+
+
+}
+double NURBCurvesMPS::DistOnSpline(double u1, double u2,double** ctrl_p,double _u_max,size_t *knot,size_t K,size_t N,bool kts,double _tol)
+{
+	//divide the distance into n interval, and measure euclidean distance between 
+	//each two consecutive points
+	double umin,umax,u_s,x_prv,y_prv,xx,yy,u,dist(0);
+	size_t n(50),V;
+	if(u1<u2){umax=u2;umin=u1;}
+	else{umax=u1;umin=u2;}
+	u_s=double(umax-umin)/double(n);
+	bool open;
+
+	if(abs(u2-u1)<=_tol){return 0.0;}
+
+	if(Dist(ctrl_p[1][0],ctrl_p[1][1],0,ctrl_p[N][0],ctrl_p[N][1],0)<_tol*_tol){open=false;}
+	else{open=true;}
+	
+	ConstructSpline spline;
+
+	spline.PointOnSplineCurve(umin,N,K,ctrl_p,knot,x_prv,y_prv,kts,_tol,_u_max);	
+	for(V=1;V<=n;V++){
+		u=umin+V*u_s;
+		if(u>=_u_max){u=_u_max-_tol;}
+		spline.PointOnSplineCurve(u,N,K,ctrl_p,knot,xx,yy,kts,_tol,_u_max);
+		dist+=Dist(xx,yy,0,x_prv,y_prv,0);
+		x_prv=xx;
+		y_prv=yy;
+	}
+
+	//if it's open curve, we have just one bath
+	//if it's closed curve, then the reverse bath might gives shorter distance
+	if(!open){
+		bool part1=false;//
+		double dist1(0),x_nxt,y_nxt,uu,u_nxt;
+
+		spline.PointOnSplineCurve(umax,N,K,ctrl_p,knot,xx,yy,kts,_tol,_u_max);
+		uu=umax;
+		while(true){
+			u_nxt=uu+u_s;
+
+			if(u_nxt>=_u_max){
+				uu=0;
+				spline.PointOnSplineCurve(uu,N,K,ctrl_p,knot,xx,yy,kts,_tol,_u_max);
+				part1=true;
+				continue;
+			}
+			if(u_nxt>umin && part1){break;}
+				
+			spline.PointOnSplineCurve(u_nxt,N,K,ctrl_p,knot,x_nxt,y_nxt,kts,_tol,_u_max);
 			dist1+=Dist(xx,yy,0,x_nxt,y_nxt,0);
 
 			xx=x_nxt;
@@ -294,13 +379,17 @@ void NURBCurvesMPS::PlotThatPoint(double xx, double yy,size_t disk,double** ctrl
 	}
 	
 }
-bool NURBCurvesMPS::Conflicting(double xx, double yy,double uu,size_t _num_samples,double**_samples,double _r_input,double**ctrl_p,double _u_max,size_t*knot,size_t K, size_t N,bool kts,double _tol)
+bool NURBCurvesMPS::Conflicting(double xx, double yy,double uu,size_t _num_samples,double**_samples,double _r_input,double**ctrl_p,double _u_max,size_t*knot,size_t K, size_t N,bool kts,double _tol,size_t _method)
 {	
 	//TODO use kd-tree
 	size_t V;
 	double dist;
 	for(V=0;V<_num_samples;V++){
-		dist=DistOnNurb(_samples[V][2],uu,ctrl_p,_u_max,knot,K,N,kts,_tol);
+		if(_method==1){
+			dist=DistOnNurb(_samples[V][2],uu,ctrl_p,_u_max,knot,K,N,kts,_tol);
+		}else{
+			dist=DistOnSpline(_samples[V][2],uu,ctrl_p,_u_max,knot,K,N,kts,_tol);
+		}
 		if(dist<_r_input){return true;}
 	}
 	return false;
