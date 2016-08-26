@@ -1,4 +1,3 @@
-%something
 geometric_functions_code
 ========================
 
